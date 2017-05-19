@@ -6,7 +6,7 @@ import java.util.HashMap;
 public class Game extends Thread {
     public static void main(String[] args) throws InterruptedException {
         GridDisplay display = new GridDisplay(20, 20);
-        Game game = new Game(2, 200);
+        Game game = new Game(2, 200, true);
         game.start();
 
         while (game.isStillPlaying()) {
@@ -22,6 +22,8 @@ public class Game extends Thread {
     private boolean stillPlaying;
     private int delay;
 
+    private boolean playSnake;
+
     public GridSquare[][] getGrid() {
         return grid;
     }
@@ -29,7 +31,8 @@ public class Game extends Thread {
     //NEED FINAL ARRAY LIST OF POSSIBLE SNAKE LOCATIONS
 
     //numPlayers is between 2 and 6
-    public Game(int numPlayers, int delay) {
+    public Game(int numPlayers, int delay, boolean playSnake) {
+        this.playSnake = playSnake;
         this.delay = delay;
         snakeDirections = new Direction[numPlayers];
 
@@ -76,7 +79,9 @@ public class Game extends Thread {
                 snakes[i].setDirection(snakeDirections[i]);
             }
 
-            //spawnFood();
+            if (playSnake) {
+                spawnFood();
+            }
 
             //Get everyone's next move
             Location[] nextMoves = nextMoves(snakes);
@@ -85,7 +90,10 @@ public class Game extends Thread {
             for (Snake snake : snakes) {
                 if (snake.isAlive()) {
                     Location tailLoc = snake.getSegmentLocations().get(snake.getSegmentLocations().size() - 1);
-                    //grid[tailLoc.getRow()][tailLoc.getCol()].setSnakePart(9);
+
+                    if (playSnake) {
+                        grid[tailLoc.getRow()][tailLoc.getCol()].setSnakePart(9);
+                    }
                 }
             }
 
@@ -107,7 +115,9 @@ public class Game extends Thread {
                         square.setFood(false);
                         square.setSnakePart(i);
                     } else {
-                        //Location tailLoc = snakes[i].removeTail();
+                        if (playSnake) {
+                            Location tailLoc = snakes[i].removeTail();
+                        }
                     }
                 }
             }
@@ -153,6 +163,30 @@ public class Game extends Thread {
             } else {
                 locations[i] = null;
             }
+        }
+
+        for (int i = 0; i < locations.length; i++) {
+            int newRow = locations[i].getRow();
+            int newCol = locations[i].getCol();
+
+
+            if (locations[i] != null && (locations[i].getRow() < 0 || locations[i].getCol() < 0 || locations[i].getRow() >= grid.length || locations[i].getCol() >= grid.length)) {
+                if (locations[i].getRow() < 0) {
+                    newRow = grid.length - 1;
+                }
+                else if (locations[i].getRow() >= grid.length) {
+                    newRow = 0;
+                }
+                if (locations[i].getCol() < 0) {
+                    newCol = grid[0].length - 1;
+                }
+                else if (locations[i].getCol() >= grid.length) {
+                    newCol = 0;
+                }
+            }
+
+            locations[i] = new Location(newRow, newCol);
+
         }
 
         return locations;

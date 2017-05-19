@@ -2,11 +2,21 @@
  * Created by austinzhang on 4/17/17.
  */
 
-import java.awt.*;
 import java.io.*;  //for BufferedReader, InputStreamReader, PrintWriter
 import java.net.*;  //for Socket
 
 public class Player {
+
+    /**
+     * CHANGE THIS FOR THE NUMBER OF PLAYERS
+     */
+    private static final int NUM_PLAYERS = 3;
+    /**
+     * CHANGE THIS FOR THE NUMBER OF PLAYERS
+     */
+
+
+    private static final int UPLOAD_DELAY = 10;
 
     public static void main(String args[]) throws IOException, InterruptedException {
         //Currently only up to 9 snakes can play so we don't really need more than 9 colors
@@ -18,18 +28,17 @@ public class Player {
 
         GridDisplay display;
 
-        display = new GridDisplay(20, 20);
+        display = new GridDisplay(10 * NUM_PLAYERS, 10 * NUM_PLAYERS);
 
         String playerName = display.showInputDialog("What's your username?");
 
-        Socket socket = new Socket("10.13.101.130", 9000); //connect to server on port 9000 192.168.1.30.
+        Socket socket = new Socket("10.13.101.45", 9000); //connect to server on port 9000 192.168.1.30.
 
         KeyListener keyListener = new KeyListener(display, 10);
 
         PlayerInputHandler playerInputHandler = new PlayerInputHandler(socket);
 
-        PlayerOutputHandler playerOutputHandler = new PlayerOutputHandler(socket, keyListener.getLastDirection(), playerName);
-
+        PlayerOutputHandler playerOutputHandler = new PlayerOutputHandler(socket, keyListener.getLastDirection(), playerName, UPLOAD_DELAY);
 
         playerInputHandler.start();
         playerOutputHandler.start();

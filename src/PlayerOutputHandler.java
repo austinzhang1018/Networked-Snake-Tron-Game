@@ -10,19 +10,31 @@ public class PlayerOutputHandler extends Thread {
     private Direction direction;
     private String playerName;
     private boolean firstRun;
+    private int delay;
 
-    public PlayerOutputHandler(Socket socket, Direction direction, String playerName) {
+    public PlayerOutputHandler(Socket socket, Direction direction, String playerName, int delay) {
         this.socket = socket;
         this.direction = direction;
         this.playerName = playerName;
         firstRun = true;
+        this.delay = delay;
     }
 
     @Override
     public void run() {
         Direction lastDirection = null;
         while (!socket.isClosed()) {
-            if (direction != lastDirection) {
+
+            boolean oppositeDirection = false;
+            if (lastDirection == Direction.UP && direction == Direction.DOWN ||
+                    lastDirection == Direction.DOWN && direction == Direction.UP ||
+                    lastDirection == Direction.LEFT && direction == Direction.RIGHT ||
+                    lastDirection == Direction.RIGHT && direction == Direction.LEFT) {
+                oppositeDirection = true;
+
+            }
+
+            if (direction != lastDirection && !oppositeDirection) {
                 lastDirection = direction;
                 try {
                     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -43,6 +55,11 @@ public class PlayerOutputHandler extends Thread {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+            }
+            try {
+                Thread.sleep(delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }

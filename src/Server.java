@@ -11,9 +11,11 @@ import java.net.*;  //for ServerSocket, Socket
 import java.util.Arrays;
 
 public class Server {
-    private static final int MAP_UPLOAD_DELAY = 175;
+    private static final int MAP_UPLOAD_DELAY = 30;
     private static final int GAME_DELAY = 200;
     private static final int NUM_PLAYERS = 2;
+
+    private static final boolean PLAY_SNAKE = true;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         Color[] snakeColors = {new Color(100, 50, 5), new Color(100, 5, 50), new Color(50, 100, 5), new Color(50, 5, 100), new Color(5, 50, 100), new Color(5, 100, 50),
@@ -29,7 +31,7 @@ public class Server {
 
         ServerSocket server = new ServerSocket(9000);  //start server on port 9000
 
-        Game game = new Game(NUM_PLAYERS, GAME_DELAY);
+        Game game = new Game(NUM_PLAYERS, GAME_DELAY, PLAY_SNAKE);
 
         String serializedGrid = serializeGrid(game.getGrid());
 
@@ -53,7 +55,7 @@ public class Server {
 
 
         while (true) {
-            game = new Game(NUM_PLAYERS, GAME_DELAY);
+            game = new Game(NUM_PLAYERS, GAME_DELAY, PLAY_SNAKE);
 
             game.setPlayerNames(playerNames);
 
