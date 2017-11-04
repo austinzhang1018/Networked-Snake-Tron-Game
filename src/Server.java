@@ -9,126 +9,167 @@
 import java.io.*;  //for BufferedReader, InputStreamReader, PrintWriter
 import java.net.*;  //for ServerSocket, Socket
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * NEED TO MAKE COMMUNICATION TWO WAY SO GAME DOESN'T START TILL PEOPLE EXIT
+ * START BY LOOKING AT PLAYER INPUT HANDLER
+ */
 
 public class Server {
-    private static final int MAP_UPLOAD_DELAY = 30;
     private static final int GAME_DELAY = 200;
-    private static final int NUM_PLAYERS = 2;
+    private static final int NUM_PLAYERS = 4;
 
-    private static final boolean PLAY_SNAKE = true;
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        Color[] snakeColors = {new Color(100, 50, 5), new Color(100, 5, 50), new Color(50, 100, 5), new Color(50, 5, 100), new Color(5, 50, 100), new Color(5, 100, 50),
-                new Color(15, 54, 200), new Color(94, 167, 134), new Color(150, 45, 150)
-        };
+        boolean PLAY_SNAKE = false;
 
         Socket[] sockets = new Socket[NUM_PLAYERS];
 
-
-        ServerPlayerHandler[] players = new ServerPlayerHandler[sockets.length];
-
-        GridDisplay serverDisplay = new GridDisplay(NUM_PLAYERS * 10, NUM_PLAYERS * 10);
+        ServerInputHandler[] inputs = new ServerInputHandler[sockets.length];
+        ServerOutputHandler[] outputs = new ServerOutputHandler[sockets.length];
 
         ServerSocket server = new ServerSocket(9000);  //start server on port 9000
 
         Game game = new Game(NUM_PLAYERS, GAME_DELAY, PLAY_SNAKE);
 
-        String serializedGrid = serializeGrid(game.getGrid());
-
         for (int i = 0; i < sockets.length; i++) {
             sockets[i] = server.accept();
-            players[i] = new ServerPlayerHandler(sockets[i], serializedGrid, MAP_UPLOAD_DELAY);
-            players[i].start();
+            inputs[i] = new ServerInputHandler(sockets[i], Direction.UP);
+            outputs[i] = new ServerOutputHandler(sockets[i]);
+            inputs[i].start();
             System.out.println("Client Connected");
         }
-        System.out.println("Reached");
 
-        String[] playerNames = new String[players.length];
+        String[] playerNames = new String[inputs.length];
 
         Thread.sleep(50);
 
-        for (int i = 0; i < players.length; i++) {
-            System.out.println("Getplayernamescalled");
-            playerNames[i] = players[i].getPlayerName();
+        Map<String, Integer> scoreboard = new HashMap<String, Integer>();
+
+        for (int i = 0; i < inputs.length; i++) {
+            playerNames[i] = inputs[i].getPlayerName();
+            scoreboard.put(playerNames[i], 0);
         }
         System.out.println(Arrays.toString(playerNames));
 
 
+        GridDisplay display = new GridDisplay(10 * NUM_PLAYERS, 10 * NUM_PLAYERS);
+
         while (true) {
             game = new Game(NUM_PLAYERS, GAME_DELAY, PLAY_SNAKE);
 
+            Thread.sleep(800);
+
+            updateDisplay(display, game);
+
+            sendInitialLoad(game.getGrid(), outputs);
+            //loadBoard(game.getGrid(), outputs);
+
+            Thread.sleep(800);
+
             game.setPlayerNames(playerNames);
 
-
-            game.start();
-
             while (game.isStillPlaying()) {
-                parseIntoBoard(serializeGrid(game.getGrid()), serverDisplay, snakeColors);
+
+                game.waitForDelay();
+
+                GridSquare[][] oldGrid = new GridSquare[game.getGrid().length][game.getGrid()[0].length];
+
+                for (int row = 0; row < oldGrid.length; row++) {
+                    for (int col = 0; col < oldGrid[0].length; col++) {
+                        oldGrid[row][col] = new GridSquare(game.getGrid()[row][col]);
+                    }
+                }
 
                 Direction[] snakeDirections = new Direction[sockets.length];
 
-                for (int i = 0; i < players.length; i++) {
-                    players[i].updateSerializedGrid(serializeGrid(game.getGrid()));
-                    snakeDirections[i] = players[i].getDirection();
+                for (int i = 0; i < inputs.length; i++) {
+                    snakeDirections[i] = inputs[i].getDirection();
                 }
                 game.setSnakeDirections(snakeDirections);
+                game.playOneRound();
+                updateDisplay(display, game);
+                updateBoardLocations(oldGrid, game.getGrid(), outputs);
+                for (int i = 0; i < inputs.length; i++) {
+                    outputs[i].sendServerSnakeDirection(snakeDirections[i]);
+                }
+            }
+            if (game.getWinner() != null) {
+                scoreboard.put(game.getWinner(), scoreboard.get(game.getWinner())+ 1);
+            }
+            for (ServerOutputHandler output : outputs) {
+                output.updateWinner(game.getWinner(), scoreboard);
+            }
+
+            boolean allReady = false;
+
+            while (!allReady) {
+                allReady = true;
+                for (ServerInputHandler input : inputs) {
+                    if (!input.isReady()) {
+                        allReady = false;
+                    }
+                }
+            }
+
+            for (ServerOutputHandler output : outputs) {
+                output.clearBoard();
+            }
+
+            for (ServerInputHandler input : inputs) {
+                input.resetReadiness();
             }
         }
 
-        //disconnect from client
-//        for (Socket socket : sockets) {
-//            socket.close();
-//        }
     }
 
-    public static String serializeGrid(GridSquare[][] grid) {
-        boolean firstTime = true;
-
-        //If O: NO FOOD NO SNAKE
-        //If F: FOOD NO SNAKE
-        //If S: NO FOOD SNAKE
-        String string = "";
-        for (int i = 0; i < grid.length; i++) {
-            if (!firstTime) {
-                string = string + "|";
-            }
-            firstTime = false;
-
-            for (GridSquare gridSquare : grid[i]) {
-                if (gridSquare.hasSnakePart()) {
-                    string = string + gridSquare.getSnakePart();
-                } else if (gridSquare.hasFood()) {
-                    string = string + "F";
-                } else {
-                    string = string + "O";
+    private static void loadBoard(GridSquare[][] grid, ServerOutputHandler[] outputs) {
+        for (int row = 0; row < grid.length; row++) {
+            for (int col = 0; col < grid.length; col++) {
+                for (ServerOutputHandler output : outputs) {
+                    System.out.println("LOAD BOARD CALLED");
+                    output.updateLocation(row, col, grid[row][col].toString());
                 }
             }
         }
-
-        return string;
     }
 
-    public static void parseIntoBoard(String boardString, GridDisplay display, Color snakeColors[]) {
-        int row = 0;
-        int col = 0;
-
-        for (int i = 0; i < boardString.length(); i++) {
-            String character = boardString.substring(i, i + 1);
-            if (character.equals("|")) {
-                row++;
-                col = 0;
-            } else if (character.equals("F")) {
-                display.setColor(new Location(row, col), new Color(10, 200, 20));
-                col++;
-            } else if (character.equals("O")) {
-                display.setColor(new Location(row, col), new Color(0, 0, 0));
-                col++;
-            } else {
-                display.setColor(new Location(row, col), snakeColors[Integer.parseInt(character)]);
-                col++;
+    private static void updateBoardLocations(GridSquare[][] oldGrid, GridSquare[][] newGrid, ServerOutputHandler[] outputs) {
+        for (int row = 0; row < oldGrid.length; row++) {
+            for (int col = 0; col < oldGrid[0].length; col++) {
+                if (!(oldGrid[row][col].toString().equals(newGrid[row][col].toString()))) {
+                    for (ServerOutputHandler output : outputs) {
+                        output.updateLocation(row, col, newGrid[row][col].toString());
+                    }
+                }
             }
         }
     }
 
+    private static void sendInitialLoad(GridSquare[][] grid, ServerOutputHandler[] outputs) {
+        for (int row = 0; row < grid.length; row++) {
+            for (int col = 0; col < grid[0].length; col++) {
+                if (grid[row][col].hasSnakePart() || grid[row][col].hasFood()) {
+                    for (ServerOutputHandler output : outputs) {
+                        output.updateLocation(row, col, grid[row][col].toString());
+                    }
+                }
+            }
+        }
+    }
+
+
+    private static void updateDisplay(GridDisplay display, Game game) {
+        for (int row = 0; row < game.getGrid().length; row++) {
+            for (int col = 0; col < game.getGrid()[0].length; col++) {
+                if (game.getGrid()[row][col].getSnakePart() != 9)
+                    display.setColor(new Location(row, col), new Color(215, 10, 152));
+                else
+                    display.setColor(new Location(row, col), new Color(0, 0, 0));
+            }
+        }
+    }
 
 }

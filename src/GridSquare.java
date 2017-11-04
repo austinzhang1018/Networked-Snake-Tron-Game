@@ -30,4 +30,20 @@ public class GridSquare {
     public void setSnakePart(int part) {
         this.snakePart = part;
     }
+
+    @Override
+    public String toString() {
+        if (hasSnakePart()) {
+            return getSnakePart() + "";
+        }
+        if (hasFood) {
+            return "F";
+        }
+        return "O";
+    }
+
+    public GridSquare(GridSquare oldGridSquare) {
+        this.hasFood = oldGridSquare.hasFood;
+        this.snakePart = oldGridSquare.getSnakePart();
+    }
 }

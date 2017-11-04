@@ -10,33 +10,30 @@ public class Player {
     /**
      * CHANGE THIS FOR THE NUMBER OF PLAYERS
      */
-    private static final int NUM_PLAYERS = 3;
+    private static final int NUM_PLAYERS = 4;
+
     /**
      * CHANGE THIS FOR THE NUMBER OF PLAYERS
      */
 
-
     private static final int UPLOAD_DELAY = 10;
 
     public static void main(String args[]) throws IOException, InterruptedException {
-        //Currently only up to 9 snakes can play so we don't really need more than 9 colors
-        Color[] snakeColors = {new Color(100, 50, 5), new Color(100, 5, 50), new Color(245, 100, 5), new Color(50, 5, 100), new Color(5, 50, 100), new Color(5, 100, 50),
-                new Color(15, 54, 200), new Color(94, 167, 134), new Color(150, 45, 150)
-        };
-
-        String lastGrid = "";
-
         GridDisplay display;
 
         display = new GridDisplay(10 * NUM_PLAYERS, 10 * NUM_PLAYERS);
 
+        display.setLineColor(new Color(0,0,0));
+
+        display.setName("NetSnek");
+
         String playerName = display.showInputDialog("What's your username?");
 
-        Socket socket = new Socket("10.13.101.45", 9000); //connect to server on port 9000 192.168.1.30.
+        Socket socket = new Socket("192.168.235.1", 9000); //connect to server on port 9000 192.168.1.30.
 
         KeyListener keyListener = new KeyListener(display, 10);
 
-        PlayerInputHandler playerInputHandler = new PlayerInputHandler(socket);
+        PlayerInputHandler playerInputHandler = new PlayerInputHandler(socket, display);
 
         PlayerOutputHandler playerOutputHandler = new PlayerOutputHandler(socket, keyListener.getLastDirection(), playerName, UPLOAD_DELAY);
 
@@ -44,59 +41,12 @@ public class Player {
         playerOutputHandler.start();
         keyListener.start();
 
-        while (playerInputHandler.getSerializedGrid() == null) {
-            Thread.sleep(10);
-        }
-
         while (!socket.isClosed()) {
-
-            String newGrid = playerInputHandler.getSerializedGrid();
-
-            if (!newGrid.equals(lastGrid)) {
-                parseIntoBoard(playerInputHandler.getSerializedGrid(), display, snakeColors);
-                lastGrid = newGrid;
-            }
-
             playerOutputHandler.updateDirection(keyListener.getLastDirection());
+            //The Player's current direction as pulled from the server
+            playerOutputHandler.updateCurrentDirection(playerInputHandler.getCurrentDirection());
         }
 
         keyListener.close();
-
-        /*
-        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-        out.println("lowercase");  //send message to server
-        String line = in.readLine();  //wait for message from server
-        System.out.println(line);  //print message from server
-
-        //disconnect from server
-        in.close();
-        out.close();
-        socket.close();
-        */
     }
-
-    public static void parseIntoBoard(String boardString, GridDisplay display, Color snakeColors[]) {
-        int row = 0;
-        int col = 0;
-
-        for (int i = 0; i < boardString.length(); i++) {
-            String character = boardString.substring(i, i + 1);
-            if (character.equals("|")) {
-                row++;
-                col = 0;
-            } else if (character.equals("F")) {
-                display.setColor(new Location(row, col), new Color(10, 200, 20));
-                col++;
-            }  else if (character.equals("O")) {
-                display.setColor(new Location(row, col), new Color(0, 0, 0));
-                col++;
-            }
-            else {
-                display.setColor(new Location(row, col), snakeColors[Integer.parseInt(character)]);
-                col++;
-            }
-        }
-    }
-
 }

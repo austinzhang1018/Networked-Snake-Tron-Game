@@ -3,11 +3,11 @@ import java.util.HashMap;
 /**
  * This is the local version of the snake game. Built for reference and comparison before making networked version.
  */
-public class Game extends Thread {
+public class Game {
     public static void main(String[] args) throws InterruptedException {
         GridDisplay display = new GridDisplay(20, 20);
-        Game game = new Game(2, 200, true);
-        game.start();
+        Game game = new Game(2, 200, false);
+        //game.start();
 
         while (game.isStillPlaying()) {
             Thread.sleep(10);
@@ -23,6 +23,8 @@ public class Game extends Thread {
     private int delay;
 
     private boolean playSnake;
+
+    private String winner;
 
     public GridSquare[][] getGrid() {
         return grid;
@@ -65,16 +67,15 @@ public class Game extends Thread {
 
     }
 
+    public void waitForDelay() throws InterruptedException {
+        //DELAY
+        Thread.sleep(delay);
+    }
 
-    public void play() throws InterruptedException {
+    public void playOneRound() throws InterruptedException {
         boolean keepPlaying = keepPlaying(snakes);
 
-        Thread.sleep(1500);
-
-        while (keepPlaying) {
-            //DELAY
-            Thread.sleep(delay);
-
+        if (keepPlaying) {
             for (int i = 0; i < snakes.length; i++) {
                 snakes[i].setDirection(snakeDirections[i]);
             }
@@ -84,6 +85,7 @@ public class Game extends Thread {
             }
 
             //Get everyone's next move
+
             Location[] nextMoves = nextMoves(snakes);
 
             //Remove the tail locations of snakes from the grid before killing players.
@@ -125,17 +127,20 @@ public class Game extends Thread {
             //Determine if the game has ended
             keepPlaying = keepPlaying(snakes);
         }
+        else {
+            stillPlaying = false;
 
-        //Announce winners if there are any.
-        for (Snake snake : snakes) {
-            if (snake.isAlive()) {
-                System.out.println(snake.getName() + " wins!");
-                return;
+            //Announce winners if there are any.
+            for (Snake snake : snakes) {
+                if (snake.isAlive()) {
+                    winner = snake.getName();
+                    System.out.println(snake.getName() + " wins!");
+                    return;
+                }
             }
+
+            System.out.println("No winners, it's a tie.");
         }
-
-        System.out.println("No winners, it's a tie.");
-
 
     }
 
@@ -165,28 +170,31 @@ public class Game extends Thread {
             }
         }
 
+
         for (int i = 0; i < locations.length; i++) {
-            int newRow = locations[i].getRow();
-            int newCol = locations[i].getCol();
+
+            if (snakes[i].isAlive()) {
+
+                int newRow = locations[i].getRow();
+                int newCol = locations[i].getCol();
 
 
-            if (locations[i] != null && (locations[i].getRow() < 0 || locations[i].getCol() < 0 || locations[i].getRow() >= grid.length || locations[i].getCol() >= grid.length)) {
-                if (locations[i].getRow() < 0) {
-                    newRow = grid.length - 1;
+                if (locations[i] != null && (locations[i].getRow() < 0 || locations[i].getCol() < 0 || locations[i].getRow() >= grid.length || locations[i].getCol() >= grid.length)) {
+                    if (locations[i].getRow() < 0) {
+                        newRow = grid.length - 1;
+                    } else if (locations[i].getRow() >= grid.length) {
+                        newRow = 0;
+                    }
+                    if (locations[i].getCol() < 0) {
+                        newCol = grid[0].length - 1;
+                    } else if (locations[i].getCol() >= grid.length) {
+                        newCol = 0;
+                    }
                 }
-                else if (locations[i].getRow() >= grid.length) {
-                    newRow = 0;
-                }
-                if (locations[i].getCol() < 0) {
-                    newCol = grid[0].length - 1;
-                }
-                else if (locations[i].getCol() >= grid.length) {
-                    newCol = 0;
-                }
+
+                locations[i] = new Location(newRow, newCol);
+
             }
-
-            locations[i] = new Location(newRow, newCol);
-
         }
 
         return locations;
@@ -286,8 +294,9 @@ public class Game extends Thread {
         this.snakeDirections = snakeDirections;
     }
 
-    @Override
+    //@Override
     public void run() {
+        /*
         try {
             play();
         } catch (InterruptedException e) {
@@ -295,6 +304,7 @@ public class Game extends Thread {
         }
 
         stillPlaying = false;
+        */
     }
 
     public boolean isStillPlaying() {
@@ -305,5 +315,9 @@ public class Game extends Thread {
         for (int i = 0; i < snakes.length; i++) {
             snakes[i].setName(playerNames[i]);
         }
+    }
+
+    public String getWinner() {
+        return winner;
     }
 }

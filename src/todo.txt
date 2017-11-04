@@ -1,0 +1,49 @@
+Changes that need to be made.
+1. In event of a tie game currently stored as "null wins". When null is the winner report the game as a tie.
+2. Currently, a game starts a certain elapsed time after the last game ends. Instead, make the game start a certain time after everyone exits out of their popup dialog.
+3. Minor glitch- the game changes between when someone first logs in and the game starts. Not a big deal but should fix.
+4. Add a leader board that pops up at the end of each game.
+5. Make a lobby. Allow people to host lobbies and allow players to automatically scan for lobbies. Within the lobby allow for the configuration of different aspects such as number of wins needed to win match, etc.
+6. Along with the lobbies make a start screen.
+7. Tell the player what color they are.
+8. Make game more responsive- needs a change to the network protocol
+9. Remove a player from the game when they crash or disconnect
+
+Current protocol updates the player's entire map the whole time.
+New protocol will only update the squares that have changed in color.
+Also need to add tags to messages to specify which event is being broadcast
+The protocol will be a KEY, followed by a space, followed by the remaining information.
+Ex.
+
+Handle player direction on server side - send player directions back to clients
+
+Server to Client messages
+
+
+LOCU ROW COL TYPE
+Update the type at the specified row/col
+
+SCOR WinnerName Name:Points
+Do this in order of most points. This is the leader board prompt
+
+QUIT
+Ends game
+
+PDIR DIRECTION
+Sends the current direction of the user as seen by the server
+
+
+Client to Server messages
+
+
+REDY
+Client is ready for a new game to start
+
+Sends name to server
+NAME NAME_HERE
+
+DIRC DIRECTION
+Sends the direction of the user to the server.
+
+
+

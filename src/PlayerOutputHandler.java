@@ -11,6 +11,7 @@ public class PlayerOutputHandler extends Thread {
     private String playerName;
     private boolean firstRun;
     private int delay;
+    private Direction currentDirection;
 
     public PlayerOutputHandler(Socket socket, Direction direction, String playerName, int delay) {
         this.socket = socket;
@@ -22,38 +23,36 @@ public class PlayerOutputHandler extends Thread {
 
     @Override
     public void run() {
-        Direction lastDirection = null;
         while (!socket.isClosed()) {
 
             boolean oppositeDirection = false;
-            if (lastDirection == Direction.UP && direction == Direction.DOWN ||
-                    lastDirection == Direction.DOWN && direction == Direction.UP ||
-                    lastDirection == Direction.LEFT && direction == Direction.RIGHT ||
-                    lastDirection == Direction.RIGHT && direction == Direction.LEFT) {
+            if (currentDirection == Direction.UP && direction == Direction.DOWN ||
+                    currentDirection == Direction.DOWN && direction == Direction.UP ||
+                    currentDirection == Direction.LEFT && direction == Direction.RIGHT ||
+                    currentDirection == Direction.RIGHT && direction == Direction.LEFT) {
                 oppositeDirection = true;
-
             }
 
-            if (direction != lastDirection && !oppositeDirection) {
-                lastDirection = direction;
+            if (direction != currentDirection && !oppositeDirection) {
                 try {
                     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                     if (firstRun) {
-                        out.println(playerName);
+                        out.println("NAME " + playerName);
                         firstRun = false;
                     } else {
                         if (direction == Direction.UP) {
-                            out.println("U");  //send message to Server
+                            out.println("DIRC U");  //send message to Server
                         } else if (direction == Direction.DOWN) {
-                            out.println("D");
+                            out.println("DIRC D");
                         } else if (direction == Direction.LEFT) {
-                            out.println("L");
+                            out.println("DIRC L");
                         } else if (direction == Direction.RIGHT) {
-                            out.println("R");
+                            out.println("DIRC R");
                         }
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.out.println("Connection to Host Lost: Ending Game...");
+                    System.exit(1);
                 }
             }
             try {
@@ -66,5 +65,9 @@ public class PlayerOutputHandler extends Thread {
 
     public void updateDirection(Direction direction) {
         this.direction = direction;
+    }
+
+    public void updateCurrentDirection(Direction direction) {
+        this.currentDirection = direction;
     }
 }
